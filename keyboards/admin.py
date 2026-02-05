@@ -4,6 +4,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 def get_admin_main_keyboard(role: str = "admin_cn"):
     """Главное меню админа"""
+
     keyboard = InlineKeyboardBuilder()
     
     # Основные кнопки для всех админов
