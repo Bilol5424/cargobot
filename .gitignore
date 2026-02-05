@@ -1,0 +1,17 @@
+# venv
+venv/
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# DB
+database.db
+
+# IDE
+.idea/
+.vscode/
+
+# Excel
+*.xlsx
