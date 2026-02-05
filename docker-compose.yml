@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: telegram-cargo-bot
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - DB_URL=sqlite:///database.db
+      - ADMIN_IDS=${ADMIN_IDS}
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./database.db:/app/database.db
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    depends_on:
+      - mysql
+    command: python bot.py
+
+  mysql:
+    image: mysql:8.0
+    container_name: cargo-bot-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-cargo_bot}
+      MYSQL_USER: ${MYSQL_USER:-cargo_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-cargo_password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: cargo-bot-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:

@@ -1,0 +1,22 @@
+Создание виртуального окружения
+
+В папке проекта выполни:
+
+python -m venv venv
+
+Активация виртуального окружения
+Windows (CMD / PowerShell)
+venv\Scripts\activate
+
+Linux / macOS
+source venv/bin/activate
+
+Проверка
+
+После активации в начале строки появится:
+
+(venv)
+
+Выход из окружения
+deactivate
+pip install -r requirements.txt
