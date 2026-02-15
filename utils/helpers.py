@@ -151,3 +151,23 @@ def get_user_language(telegram_id: int) -> str:
     # Эта функция должна использовать асинхронный контекст
     # Временно возвращаем русский по умолчанию
     return "ru"
+
+import re
+
+
+def normalize_track_code(code: str) -> str:
+    """
+    Нормализация трек‑кода:
+    - убирает пробелы
+    - приводит к верхнему регистру
+    - удаляет запрещённые символы
+    """
+    if not code:
+        return ""
+
+    code = code.strip().upper()
+
+    # оставляем только буквы, цифры, - _
+    code = re.sub(r"[^A-Z0-9\-_]", "", code)
+
+    return code

@@ -106,3 +106,9 @@ class UserTrackCode(Base):
     track_code = Column(String(50), nullable=False, index=True)
     status = Column(Enum(UserTrackCodeStatus), default=UserTrackCodeStatus.PENDING)
     created_at = Column(DateTime, default=datetime.utcnow)
+class AdminProfile(Base):
+    __tablename__ = "admin_profiles"
+
+    id = Column(Integer, primary_key=True)
+    tg_user_id = Column(Integer, unique=True, nullable=False)
+    name = Column(String, nullable=True)

@@ -433,3 +433,32 @@ class UserTrackCodeRepository:
             )
         )
         return result.scalar_one_or_none() is not None
+
+    # ================= ADMIN REPOSITORY =================
+
+    from database.models import AdminProfile
+    from database.session import get_session
+
+    class AdminRepository:
+        def __init__(self):
+            self.session = get_session()
+
+        async def get(self, tg_user_id: int):
+            return (
+                self.session.query(AdminProfile)
+                .filter(AdminProfile.tg_user_id == tg_user_id)
+                .first()
+            )
+
+        async def create(self, tg_user_id: int, name: str = None):
+            admin = AdminProfile(
+                tg_user_id=tg_user_id,
+                name=name,
+            )
+            self.session.add(admin)
+            self.session.commit()
+            return admin
+
+        async def update(self, admin: AdminProfile):
+            self.session.commit()
+            return admin
