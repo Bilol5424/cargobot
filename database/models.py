@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, Float, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, Float, Text, UniqueConstraint
 from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime
 import enum
@@ -35,6 +35,10 @@ class ProductCategory(enum.Enum):
     AUTOMOTIVE = "automotive"
     SPORTS = "sports"
     OTHER = "other"
+
+class UserTrackCodeStatus(enum.Enum):
+    PENDING = "pending"    # Track code not yet in products table
+    ACTIVE = "active"      # Track code exists in products table
 
 class User(Base):
     __tablename__ = "users"
@@ -90,3 +94,15 @@ class Product(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     user = relationship("User", back_populates="products")
+
+class UserTrackCode(Base):
+    __tablename__ = "user_track_codes"
+    __table_args__ = (
+        UniqueConstraint('user_id', 'track_code', name='uq_user_track_code'),
+    )
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    track_code = Column(String(50), nullable=False, index=True)
+    status = Column(Enum(UserTrackCodeStatus), default=UserTrackCodeStatus.PENDING)
+    created_at = Column(DateTime, default=datetime.utcnow)

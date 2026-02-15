@@ -2,7 +2,8 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-def get_admin_main_keyboard(role: str = "admin_cn"):
+
+def get_admin_main_keyboard(role: str = "admin_cn", language: str = "ru"):
     """Главное меню админа"""
 
     keyboard = InlineKeyboardBuilder()
@@ -84,3 +85,35 @@ def get_back_to_admin_keyboard():
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text="🔙 Назад в админ-панель", callback_data="admin_menu")
     return keyboard.as_markup()
+
+def get_product_categories_keyboard():
+    """Клавиатура выбора категории товара (для админа)"""
+    categories = [
+        ("electronics", "📱 Электроника"),
+        ("clothing", "👕 Одежда"),
+        ("shoes", "👟 Обувь"),
+        ("home_appliances", "🏠 Бытовая техника"),
+        ("beauty", "💄 Косметика"),
+        ("toys", "🧸 Игрушки"),
+        ("automotive", "🚗 Автозапчасти"),
+        ("sports", "⚽ Спорттовары"),
+        ("other", "📦 Другое"),
+    ]
+
+    keyboard = InlineKeyboardBuilder()
+    for cat_code, cat_text in categories:
+        keyboard.button(text=cat_text, callback_data=f"category_{cat_code}")
+    keyboard.button(text="🔙 Назад", callback_data="admin_menu")
+    keyboard.adjust(3, 3, 3, 1)
+    return keyboard.as_markup()
+
+def get_yes_no_keyboard(prefix: str):
+    """Клавиатура Да/Нет с заданным префиксом callback_data"""
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text="✅ Да", callback_data=f"{prefix}_yes")
+    keyboard.button(text="❌ Нет", callback_data=f"{prefix}_no")
+    keyboard.adjust(2)
+    return keyboard.as_markup()
+
+# Alias for backward compatibility
+get_admin_main_menu = get_admin_main_keyboard

@@ -69,32 +69,26 @@ def get_back_cancel_keyboard(language: str = "ru"):
 def get_track_codes_keyboard(language: str = "ru"):
     texts = {
         "ru": {
-            "my_track": "Мои трек-коды",
             "check_track": "Проверить трек-код",
-            "add_track": "Добавить трек-код",
-            "edit_track": "Изменить товар",
-            # "export": "Экспорт в Excel",  # УБИРАЕМ ЭТУ СТРОКУ
+            "my_track": "Мои трек-коды",
+            "add_pending": "Добавить временный трек-код",
             "back": "⬅️ Назад"
         },
         "tj": {
-            "my_track": "Рамзҳои тамошобини ман",
             "check_track": "Тафтиш кардани рамзи тамошобин",
-            "add_track": "Илова кардани рамзи тамошобин",
-            "edit_track": "Тағйир додани маҳсулот",
-            # "export": "Экспорт ба Excel",  # УБИРАЕМ ЭТУ СТРОКУ
+            "my_track": "Рамзҳои тамошобини ман",
+            "add_pending": "Илова кардани рамзи интизорӣ",
             "back": "⬅️ Бозгашт"
         }
     }
-    
+
     t = texts[language]
     keyboard = ReplyKeyboardBuilder()
-    keyboard.add(KeyboardButton(text=t["my_track"]))
     keyboard.add(KeyboardButton(text=t["check_track"]))
-    keyboard.add(KeyboardButton(text=t["add_track"]))
-    keyboard.add(KeyboardButton(text=t["edit_track"]))
-    # keyboard.add(KeyboardButton(text=t["export"]))  # УБИРАЕМ ЭТУ СТРОКУ
+    keyboard.add(KeyboardButton(text=t["my_track"]))
+    keyboard.add(KeyboardButton(text=t["add_pending"]))
     keyboard.add(KeyboardButton(text=t["back"]))
-    keyboard.adjust(2, 2, 1)  # Меняем раскладку
+    keyboard.adjust(2, 1, 1)
     return keyboard.as_markup(resize_keyboard=True)
     
 def get_profile_keyboard(language: str = "ru"):

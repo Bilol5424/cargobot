@@ -9,15 +9,16 @@ from aiogram.types import Message, CallbackQuery
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import Product
+from database.models import Product, User, UserTrackCode, UserTrackCodeStatus
 from database.session import async_session_maker
+from database.repository import UserTrackCodeRepository, UserRepository
 from utils.states import AdminStates
 from keyboards.admin import (
     get_back_to_admin_keyboard,
     get_product_categories_keyboard,
     get_yes_no_keyboard
 )
-from services.track_code_generator import generate_track_code
+from services.track_code_generator import TrackCodeGenerator
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ async def add_product_start(callback: CallbackQuery, state: FSMContext):
         return
     
     # Генерируем трек-код
-    track_code = generate_track_code()
+    track_code = TrackCodeGenerator.generate_track_code(callback.from_user.id)
     
     await state.update_data(
         track_code=track_code,
@@ -323,18 +324,54 @@ async def process_confirmation(callback: CallbackQuery, state: FSMContext):
             new_product = Product(**product_data)
             session.add(new_product)
             await session.commit()
-            
+
+            # Активируем ожидающие трек-коды и уведомляем пользователей
+            track_code = data.get('track_code')
+            utc_repo = UserTrackCodeRepository(session)
+            user_repo = UserRepository(session)
+            pending_user_ids = await utc_repo.activate_pending_track_codes(track_code)
+
+            notified_count = 0
+            for uid in pending_user_ids:
+                try:
+                    result = await session.execute(
+                        select(User).where(User.id == uid)
+                    )
+                    u = result.scalar_one_or_none()
+                    if u:
+                        notify_text = {
+                            "ru": f"📦 Ваш трек-код <code>{track_code}</code> зарегистрирован!\n\n"
+                                  f"🏷️ Товар: {data.get('product_name')}\n"
+                                  f"📍 Статус: Создан",
+                            "tj": f"📦 Рамзи тамошобини шумо <code>{track_code}</code> сабт шуд!\n\n"
+                                  f"🏷️ Маҳсулот: {data.get('product_name')}\n"
+                                  f"📍 Статус: Сохта шудааст"
+                        }
+                        await callback.bot.send_message(
+                            u.telegram_id,
+                            notify_text.get(u.language, notify_text["ru"]),
+                            parse_mode="HTML"
+                        )
+                        notified_count += 1
+                except Exception as e:
+                    logger.error(f"Ошибка уведомления пользователя {uid}: {e}")
+
+            notify_info = ""
+            if notified_count > 0:
+                notify_info = f"\n\n📨 Уведомлено пользователей: {notified_count}"
+
             await callback.message.edit_text(
                 f"✅ Товар успешно добавлен!\n\n"
-                f"📦 Трек-код: {data.get('track_code')}\n"
+                f"📦 Трек-код: {track_code}\n"
                 f"📝 Название: {data.get('product_name')}\n"
                 f"🏷️ Категория: {data.get('product_category')}\n"
                 f"🔢 Количество: {data.get('quantity')} шт.\n"
                 f"💰 Общая стоимость: ${data.get('total_value_usd'):.2f}\n\n"
                 f"📊 Статус: CREATED\n"
-                f"⏰ Дата добавления: {datetime.utcnow().strftime('%d.%m.%Y %H:%M')}",
+                f"⏰ Дата добавления: {datetime.utcnow().strftime('%d.%m.%Y %H:%M')}"
+                f"{notify_info}",
                 reply_markup=get_back_to_admin_keyboard()
             )
-    
+
     await state.clear()
     await callback.answer()

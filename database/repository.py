@@ -1,13 +1,13 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import update, delete, or_
+from sqlalchemy import update, delete, or_, and_
 from sqlalchemy.sql import func
 from typing import List, Optional, Tuple, Dict
 from datetime import datetime, timedelta
 import pandas as pd
 import os
 from sqlalchemy import select
-from .models import User, UserRole, Product, ProductStatus, ProductCategory
+from .models import User, UserRole, Product, ProductStatus, ProductCategory, UserTrackCode, UserTrackCodeStatus
 
 class UserRepository:
     def __init__(self, session: AsyncSession):
@@ -375,3 +375,61 @@ class ProductRepository:
         if product.is_liquid:
             properties.append("Жидкость")
         return ", ".join(properties) if properties else "Нет"
+
+
+class UserTrackCodeRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def add_user_track_code(self, user_id: int, track_code: str,
+                                   status: UserTrackCodeStatus = UserTrackCodeStatus.PENDING) -> UserTrackCode:
+        utc = UserTrackCode(user_id=user_id, track_code=track_code, status=status)
+        self.session.add(utc)
+        await self.session.commit()
+        await self.session.refresh(utc)
+        return utc
+
+    async def get_user_track_codes(self, user_id: int) -> List[dict]:
+        """Get all user's track codes with product info (LEFT JOIN)"""
+        from sqlalchemy.orm import aliased
+        result = await self.session.execute(
+            select(UserTrackCode, Product)
+            .outerjoin(Product, UserTrackCode.track_code == Product.track_code)
+            .where(UserTrackCode.user_id == user_id)
+            .order_by(UserTrackCode.created_at.desc())
+        )
+        rows = result.all()
+        return [{"user_track_code": utc, "product": product} for utc, product in rows]
+
+    async def get_pending_by_track_code(self, track_code: str) -> List[UserTrackCode]:
+        result = await self.session.execute(
+            select(UserTrackCode).where(
+                and_(
+                    UserTrackCode.track_code == track_code,
+                    UserTrackCode.status == UserTrackCodeStatus.PENDING
+                )
+            )
+        )
+        return result.scalars().all()
+
+    async def activate_pending_track_codes(self, track_code: str) -> List[int]:
+        """Update PENDING → ACTIVE for a track code. Returns list of affected user_ids."""
+        pending = await self.get_pending_by_track_code(track_code)
+        user_ids = []
+        for utc in pending:
+            utc.status = UserTrackCodeStatus.ACTIVE
+            user_ids.append(utc.user_id)
+        if user_ids:
+            await self.session.commit()
+        return user_ids
+
+    async def user_has_track_code(self, user_id: int, track_code: str) -> bool:
+        result = await self.session.execute(
+            select(UserTrackCode).where(
+                and_(
+                    UserTrackCode.user_id == user_id,
+                    UserTrackCode.track_code == track_code
+                )
+            )
+        )
+        return result.scalar_one_or_none() is not None
