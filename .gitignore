@@ -1,17 +1,123 @@
-# venv
-venv/
-.env
-
+# =========================
 # Python
+# =========================
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
-# DB
-database.db
+# C extensions
+*.so
 
-# IDE
+# Distribution / packaging
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# =========================
+# Virtual environments
+# =========================
+.env
+.venv
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# =========================
+# Logs & databases
+# =========================
+*.log
+*.sqlite3
+db.sqlite3
+*.db
+
+# =========================
+# Unit test / coverage
+# =========================
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# =========================
+# Jupyter Notebook
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# PyCharm
+# =========================
 .idea/
+
+# =========================
+# VS Code
+# =========================
 .vscode/
 
-# Excel
-*.xlsx
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Environment variables
+# =========================
+.env.*
+!.env.example
+
+# =========================
+# Type checkers
+# =========================
+.mypy_cache/
+.pyre/
+.pytype/
+
+# =========================
+# Ruff / linters
+# =========================
+.ruff_cache/
+
+# =========================
+# Poetry
+# =========================
+poetry.lock
+
+# =========================
+# Pipenv
+# =========================
+Pipfile.lock
+
+# =========================
+# Django stuff
+# =========================
+*.pot
+*.pyc
+local_settings.py
+media/
+
+# =========================
+# FastAPI / Uvicorn
+# =========================
+*.pid
+*.sock
