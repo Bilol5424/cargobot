@@ -17,6 +17,12 @@ class AdminStates(StatesGroup):
     WAITING_PRODUCT_COUNTRY = State()
     WAITING_DELIVERY_TYPE = State()
     WAITING_CONFIRMATION = State()
+
+    # Массовая загрузка трек-кодов
+    BULK_IMPORT_CHOICE = State()
+    BULK_IMPORT_TEXT_INPUT = State()
+    BULK_IMPORT_EXCEL_UPLOAD = State()
+    BULK_IMPORT_MANUAL_TRACK = State()
 class LanguageState(StatesGroup):
     choosing_language = State()
 

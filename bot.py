@@ -13,6 +13,7 @@ from handlers.admin.update_status import update_status_router
 from handlers.admin.reports import reports_router
 from handlers.admin.profile import admin_profile_router  # ИСПРАВЛЕНО
 from handlers.admin.add_product import add_product_router
+from handlers.admin.bulk_import import bulk_import_router
 
 # Настройка логирования
 logging.basicConfig(
@@ -80,6 +81,7 @@ async def main():
     dp.include_router(reports_router)
     dp.include_router(admin_profile_router)  # ИСПРАВЛЕНО
     dp.include_router(add_product_router)
+    dp.include_router(bulk_import_router)
 
     # 4. Существующие админские файлы - импортируем все найденные
     # admin_export уже зарегистрирован выше, пропускаем его

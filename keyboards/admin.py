@@ -7,27 +7,28 @@ def get_admin_main_keyboard(role: str = "admin_cn", language: str = "ru"):
     """Главное меню админа"""
 
     keyboard = InlineKeyboardBuilder()
-    
+
     # Основные кнопки для всех админов
     keyboard.button(text="📦 Добавить трек-код", callback_data="admin_add_product")
+    keyboard.button(text="📥 Массовая загрузка", callback_data="admin_bulk_import")
     keyboard.button(text="🔄 Обновить статусы", callback_data="admin_update_status")
     keyboard.button(text="📊 Отчеты", callback_data="admin_reports")
     keyboard.button(text="👨‍💼 Профиль", callback_data="admin_profile")
-    
+
     # Дополнительные функции
     keyboard.button(text="📋 Все товары", callback_data="admin_all_products")
     keyboard.button(text="🔍 Поиск", callback_data="admin_search")
-    
+
     # Специфичные кнопки в зависимости от роли
     if role == "admin_cn":
         keyboard.button(text="🇨🇳 Китайский склад", callback_data="admin_china_warehouse")
     elif role == "admin_tj":
         keyboard.button(text="🇹🇯 Таджикский склад", callback_data="admin_tj_warehouse")
-    
+
     keyboard.button(text="⚙️ Настройки", callback_data="admin_settings")
     keyboard.button(text="🔙 В главное меню", callback_data="main_menu")
-    
-    keyboard.adjust(2, 2, 2, 1, 1)
+
+    keyboard.adjust(2, 2, 1, 2, 1, 1)
     return keyboard.as_markup()
 
 def get_status_update_menu_keyboard():
@@ -114,6 +115,20 @@ def get_yes_no_keyboard(prefix: str):
     keyboard.button(text="❌ Нет", callback_data=f"{prefix}_no")
     keyboard.adjust(2)
     return keyboard.as_markup()
+
+def get_bulk_import_keyboard():
+    """Клавиатура выбора способа массовой загрузки"""
+    keyboard = InlineKeyboardBuilder()
+
+    keyboard.button(text="📝 Список трек-кодов", callback_data="bulk_import_text")
+    keyboard.button(text="📄 Excel файл", callback_data="bulk_import_excel")
+    keyboard.button(text="📥 Скачать шаблон Excel", callback_data="download_excel_template")
+    keyboard.button(text="✍️ Ручной ввод трек-кода", callback_data="bulk_import_manual")
+    keyboard.button(text="🔙 Назад", callback_data="admin_menu")
+
+    keyboard.adjust(2, 1, 1, 1)
+    return keyboard.as_markup()
+
 
 # Alias for backward compatibility
 get_admin_main_menu = get_admin_main_keyboard
