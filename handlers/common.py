@@ -28,13 +28,28 @@ async def cmd_start(message: Message, state: FSMContext):
     async for session in get_db():
         user_repo = UserRepository(session)
         user = await user_repo.get_user_by_telegram_id(message.from_user.id)
-        
+
         if user:
             # Пользователь уже существует
-            logger.info(f"Пользователь {message.from_user.id} уже зарегистрирован")
+            logger.info(
+                f"Пользователь {message.from_user.id} уже зарегистрирован (role={user.role})"
+            )
+
+            # ✅ ЕСЛИ АДМИН — показываем админ меню
+            if user.role and user.role.value != "client":
+                from keyboards.admin import get_admin_main_menu
+
+                await message.answer(
+                    get_welcome_text(user.language, is_admin=True),
+                    reply_markup=get_admin_main_menu(user.role.value, user.language),
+                )
+                await state.clear()
+                return
+
+            # ✅ ИНАЧЕ — клиент
             await message.answer(
                 get_welcome_text(user.language),
-                reply_markup=get_main_menu_keyboard(user.language)
+                reply_markup=get_main_menu_keyboard(user.language),
             )
             await state.set_state(ClientState.main_menu)
         else:
