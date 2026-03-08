@@ -1,134 +1,283 @@
-# keyboards/admin.py - дополняем существующий файл
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+# keyboards/admin.py
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 
-def get_admin_main_keyboard(role: str = "admin_cn", language: str = "ru"):
-    """Главное меню админа"""
+def get_admin_main_keyboard(role: str = "admin_cn", language: str = "ru") -> ReplyKeyboardMarkup:
+    """
+    Главное меню администратора (reply-клавиатура).
+    """
+    texts = {
+        "ru": {
+            "add_product": "📦 Добавить трек-код",
+            "bulk_import": "📥 Массовая загрузка",
+            "update_status": "🔄 Обновить статусы",
+            "reports": "📊 Отчеты",
+            "profile": "👨‍💼 Профиль",
+            "all_products": "📋 Все товары",
+            "search": "🔍 Поиск",
+            "china_warehouse": "🇨🇳 Китайский склад",
+            "tj_warehouse": "🇹🇯 Таджикский склад",
+            "settings": "⚙️ Настройки",
+            "main_menu": "🔙 В главное меню",
+        },
+        "tj": {
+            "add_product": "📦 Илова кардани рамз",
+            "bulk_import": "📥 Боркунии оммавӣ",
+            "update_status": "🔄 Навсозии статус",
+            "reports": "📊 Ҳисоботҳо",
+            "profile": "👨‍💼 Профил",
+            "all_products": "📋 Ҳамаи маҳсулот",
+            "search": "🔍 Ҷустуҷӯ",
+            "china_warehouse": "🇨🇳 Анбори Чин",
+            "tj_warehouse": "🇹🇯 Анбори Тоҷикистон",
+            "settings": "⚙️ Танзимот",
+            "main_menu": "🔙 Ба менюи асосӣ",
+        }
+    }
+    t = texts[language]
 
-    keyboard = InlineKeyboardBuilder()
-
-    # Основные кнопки для всех админов
-    keyboard.button(text="📦 Добавить трек-код", callback_data="admin_add_product")
-    keyboard.button(text="📥 Массовая загрузка", callback_data="admin_bulk_import")
-    keyboard.button(text="🔄 Обновить статусы", callback_data="admin_update_status")
-    keyboard.button(text="📊 Отчеты", callback_data="admin_reports")
-    keyboard.button(text="👨‍💼 Профиль", callback_data="admin_profile")
-
-    # Дополнительные функции
-    keyboard.button(text="📋 Все товары", callback_data="admin_all_products")
-    keyboard.button(text="🔍 Поиск", callback_data="admin_search")
-
-    # Специфичные кнопки в зависимости от роли
+    builder = ReplyKeyboardBuilder()
+    builder.row(
+        KeyboardButton(text=t["add_product"]),
+        KeyboardButton(text=t["bulk_import"]),
+        width=2
+    )
+    builder.row(
+        KeyboardButton(text=t["update_status"]),
+        KeyboardButton(text=t["reports"]),
+        width=2
+    )
+    builder.row(
+        KeyboardButton(text=t["profile"]),
+        KeyboardButton(text=t["all_products"]),
+        width=2
+    )
+    builder.row(
+        KeyboardButton(text=t["search"]),
+        width=1
+    )
     if role == "admin_cn":
-        keyboard.button(text="🇨🇳 Китайский склад", callback_data="admin_china_warehouse")
+        builder.row(KeyboardButton(text=t["china_warehouse"]), width=1)
     elif role == "admin_tj":
-        keyboard.button(text="🇹🇯 Таджикский склад", callback_data="admin_tj_warehouse")
+        builder.row(KeyboardButton(text=t["tj_warehouse"]), width=1)
+    builder.row(
+        KeyboardButton(text=t["settings"]),
+        KeyboardButton(text=t["main_menu"]),
+        width=2
+    )
+    return builder.as_markup(resize_keyboard=True)
 
-    keyboard.button(text="⚙️ Настройки", callback_data="admin_settings")
-    keyboard.button(text="🔙 В главное меню", callback_data="main_menu")
 
-    keyboard.adjust(2, 2, 1, 2, 1, 1)
-    return keyboard.as_markup()
+def get_status_update_menu_keyboard(language: str = "ru") -> ReplyKeyboardMarkup:
+    """Меню выбора способа обновления статусов."""
+    texts = {
+        "ru": {
+            "by_track": "🔍 По трек-коду",
+            "by_date": "📅 По дате отправки",
+            "bulk": "📋 Массовое обновление",
+            "back": "🔙 Назад",
+        },
+        "tj": {
+            "by_track": "🔍 Аз рӯи рамз",
+            "by_date": "📅 Аз рӯи сана",
+            "bulk": "📋 Навсозии оммавӣ",
+            "back": "🔙 Бозгашт",
+        }
+    }
+    t = texts[language]
+    builder = ReplyKeyboardBuilder()
+    builder.row(
+        KeyboardButton(text=t["by_track"]),
+        KeyboardButton(text=t["by_date"]),
+        width=2
+    )
+    builder.row(KeyboardButton(text=t["bulk"]), width=1)
+    builder.row(KeyboardButton(text=t["back"]), width=1)
+    return builder.as_markup(resize_keyboard=True)
 
-def get_status_update_menu_keyboard():
-    """Меню обновления статусов"""
-    keyboard = InlineKeyboardBuilder()
-    
-    keyboard.button(text="🔍 По трек-коду", callback_data="update_by_track")
-    keyboard.button(text="📅 По дате отправки", callback_data="update_by_date")
-    keyboard.button(text="📋 Массовое обновление", callback_data="update_bulk")
-    keyboard.button(text="🔙 Назад", callback_data="admin_menu")
-    
-    keyboard.adjust(2, 1, 1)
-    return keyboard.as_markup()
 
-def get_status_keyboard(is_bulk: bool = False):
-    """Клавиатура выбора статуса"""
-    statuses = [
-        ("CREATED", "📝 Создан"),
-        ("IN_CHINA_WAREHOUSE", "🇨🇳 В Китае"),
-        ("IN_TRANSIT", "✈️ В пути"),
-        ("ARRIVED_TJ", "🇹🇯 Прибыл в TJ"),
-        ("READY_FOR_PICKUP", "✅ Готов к выдаче"),
-        ("DELIVERED", "📦 Доставлен"),
-        ("CANCELLED", "❌ Отменен"),
-        ("PROBLEM", "⚠️ Проблема"),
+def get_status_keyboard(is_bulk: bool = False, language: str = "ru") -> ReplyKeyboardMarkup:
+    """Клавиатура выбора статуса."""
+    status_names = {
+        "ru": {
+            "CREATED": "📝 Создан",
+            "IN_CHINA_WAREHOUSE": "🇨🇳 В Китае",
+            "IN_TRANSIT": "✈️ В пути",
+            "ARRIVED_TJ": "🇹🇯 Прибыл в TJ",
+            "READY_FOR_PICKUP": "✅ Готов к выдаче",
+            "DELIVERED": "📦 Доставлен",
+            "CANCELLED": "❌ Отменен",
+            "PROBLEM": "⚠️ Проблема",
+        },
+        "tj": {
+            "CREATED": "📝 Сохта шуд",
+            "IN_CHINA_WAREHOUSE": "🇨🇳 Дар Чин",
+            "IN_TRANSIT": "✈️ Дар роҳ",
+            "ARRIVED_TJ": "🇹🇯 Расид ба Тоҷикистон",
+            "READY_FOR_PICKUP": "✅ Омода ба супоридан",
+            "DELIVERED": "📦 Супорида шуд",
+            "CANCELLED": "❌ Бекор карда шуд",
+            "PROBLEM": "⚠️ Мушкилот",
+        }
+    }
+    t = status_names[language]
+    # Все коды статусов в том же порядке
+    status_codes = [
+        "CREATED",
+        "IN_CHINA_WAREHOUSE",
+        "IN_TRANSIT",
+        "ARRIVED_TJ",
+        "READY_FOR_PICKUP",
+        "DELIVERED",
+        "CANCELLED",
+        "PROBLEM",
     ]
-    
-    keyboard = InlineKeyboardBuilder()
-    
-    for status_code, status_text in statuses:
-        callback_data = f"bulk_status_{status_code}" if is_bulk else f"set_status_{status_code}"
-        keyboard.button(text=status_text, callback_data=callback_data)
-    
-    keyboard.button(text="🔙 Назад", callback_data="admin_update_status")
-    keyboard.adjust(2, 2, 2, 2, 1)
-    return keyboard.as_markup()
-
-def get_reports_keyboard():
-    """Клавиатура отчетов"""
-    keyboard = InlineKeyboardBuilder()
-    
-    keyboard.button(text="📦 Доставлено за месяц", callback_data="report_monthly_delivered")
-    keyboard.button(text="📥 Принято за месяц", callback_data="report_monthly_received")
-    keyboard.button(text="💰 Финансовый отчет", callback_data="report_financial")
-    keyboard.button(text="👥 Статистика пользователей", callback_data="report_user_statistics")
-    keyboard.button(text="💾 Экспорт в Excel", callback_data="report_database_export")
-    keyboard.button(text="🖥️ Информация о системе", callback_data="admin_system_info")
-    keyboard.button(text="🔙 Назад", callback_data="admin_menu")
-    
-    keyboard.adjust(2, 2, 2, 1)
-    return keyboard.as_markup()
-
-def get_back_to_admin_keyboard():
-    """Кнопка назад в админ-меню"""
-    keyboard = InlineKeyboardBuilder()
-    keyboard.button(text="🔙 Назад в админ-панель", callback_data="admin_menu")
-    return keyboard.as_markup()
-
-def get_product_categories_keyboard():
-    """Клавиатура выбора категории товара (для админа)"""
-    categories = [
-        ("electronics", "📱 Электроника"),
-        ("clothing", "👕 Одежда"),
-        ("shoes", "👟 Обувь"),
-        ("home_appliances", "🏠 Бытовая техника"),
-        ("beauty", "💄 Косметика"),
-        ("toys", "🧸 Игрушки"),
-        ("automotive", "🚗 Автозапчасти"),
-        ("sports", "⚽ Спорттовары"),
-        ("other", "📦 Другое"),
-    ]
-
-    keyboard = InlineKeyboardBuilder()
-    for cat_code, cat_text in categories:
-        keyboard.button(text=cat_text, callback_data=f"category_{cat_code}")
-    keyboard.button(text="🔙 Назад", callback_data="admin_menu")
-    keyboard.adjust(3, 3, 3, 1)
-    return keyboard.as_markup()
-
-def get_yes_no_keyboard(prefix: str):
-    """Клавиатура Да/Нет с заданным префиксом callback_data"""
-    keyboard = InlineKeyboardBuilder()
-    keyboard.button(text="✅ Да", callback_data=f"{prefix}_yes")
-    keyboard.button(text="❌ Нет", callback_data=f"{prefix}_no")
-    keyboard.adjust(2)
-    return keyboard.as_markup()
-
-def get_bulk_import_keyboard():
-    """Клавиатура выбора способа массовой загрузки"""
-    keyboard = InlineKeyboardBuilder()
-
-    keyboard.button(text="📝 Список трек-кодов", callback_data="bulk_import_text")
-    keyboard.button(text="📄 Excel файл", callback_data="bulk_import_excel")
-    keyboard.button(text="📥 Скачать шаблон Excel", callback_data="download_excel_template")
-    keyboard.button(text="✍️ Ручной ввод трек-кода", callback_data="bulk_import_manual")
-    keyboard.button(text="🔙 Назад", callback_data="admin_menu")
-
-    keyboard.adjust(2, 1, 1, 1)
-    return keyboard.as_markup()
+    builder = ReplyKeyboardBuilder()
+    for code in status_codes:
+        builder.add(KeyboardButton(text=t[code]))
+    builder.adjust(2, 2, 2, 2)  # по две в ряд
+    builder.row(KeyboardButton(text="🔙 Назад" if language == "ru" else "🔙 Бозгашт"))
+    return builder.as_markup(resize_keyboard=True)
 
 
-# Alias for backward compatibility
+def get_reports_keyboard(language: str = "ru") -> ReplyKeyboardMarkup:
+    """Меню отчетов."""
+    texts = {
+        "ru": {
+            "monthly_delivered": "📦 Доставлено за месяц",
+            "monthly_received": "📥 Принято за месяц",
+            "financial": "💰 Финансовый отчет",
+            "user_stats": "👥 Статистика пользователей",
+            "export_excel": "💾 Экспорт в Excel",
+            "system_info": "🖥️ Информация о системе",
+            "back": "🔙 Назад",
+        },
+        "tj": {
+            "monthly_delivered": "📦 Расонидашуда дар моҳ",
+            "monthly_received": "📥 Қабулшуда дар моҳ",
+            "financial": "💰 Ҳисоботи молиявӣ",
+            "user_stats": "👥 Омори корбарон",
+            "export_excel": "💾 Экспорт ба Excel",
+            "system_info": "🖥️ Маълумоти система",
+            "back": "🔙 Бозгашт",
+        }
+    }
+    t = texts[language]
+    builder = ReplyKeyboardBuilder()
+    builder.row(
+        KeyboardButton(text=t["monthly_delivered"]),
+        KeyboardButton(text=t["monthly_received"]),
+        width=2
+    )
+    builder.row(
+        KeyboardButton(text=t["financial"]),
+        KeyboardButton(text=t["user_stats"]),
+        width=2
+    )
+    builder.row(
+        KeyboardButton(text=t["export_excel"]),
+        KeyboardButton(text=t["system_info"]),
+        width=2
+    )
+    builder.row(KeyboardButton(text=t["back"]), width=1)
+    return builder.as_markup(resize_keyboard=True)
+
+
+def get_back_to_admin_keyboard(language: str = "ru") -> ReplyKeyboardMarkup:
+    """Кнопка 'Назад' в админ-панель."""
+    text = "🔙 Назад в админ-панель" if language == "ru" else "🔙 Бозгашт ба панели админ"
+    builder = ReplyKeyboardBuilder()
+    builder.add(KeyboardButton(text=text))
+    return builder.as_markup(resize_keyboard=True)
+
+
+def get_product_categories_keyboard(language: str = "ru") -> ReplyKeyboardMarkup:
+    """Клавиатура выбора категории товара."""
+    categories = {
+        "ru": [
+            "📱 Электроника",
+            "👕 Одежда",
+            "👟 Обувь",
+            "🏠 Бытовая техника",
+            "💄 Косметика",
+            "🧸 Игрушки",
+            "🚗 Автозапчасти",
+            "⚽ Спорттовары",
+            "📦 Другое",
+        ],
+        "tj": [
+            "📱 Электроника",
+            "👕 Либос",
+            "👟 Пойафзол",
+            "🏠 Асбобҳои хонагӣ",
+            "💄 Косметика",
+            "🧸 Бозичаҳо",
+            "🚗 Қисмҳои автомобил",
+            "⚽ Ашёҳои варзишӣ",
+            "📦 Дигар",
+        ]
+    }
+    builder = ReplyKeyboardBuilder()
+    for cat in categories[language]:
+        builder.add(KeyboardButton(text=cat))
+    builder.adjust(2, 2, 2, 3)
+    builder.row(KeyboardButton(text="🔙 Назад" if language == "ru" else "🔙 Бозгашт"))
+    return builder.as_markup(resize_keyboard=True)
+
+
+def get_yes_no_keyboard(prefix: str, language: str = "ru") -> ReplyKeyboardMarkup:
+    """
+    Клавиатура Да/Нет.
+    prefix не используется для reply, оставлен для совместимости.
+    """
+    texts = {
+        "ru": ["✅ Да", "❌ Нет"],
+        "tj": ["✅ Ҳа", "❌ Не"],
+    }
+    builder = ReplyKeyboardBuilder()
+    builder.add(KeyboardButton(text=texts[language][0]))
+    builder.add(KeyboardButton(text=texts[language][1]))
+    builder.adjust(2)
+    return builder.as_markup(resize_keyboard=True)
+
+
+def get_bulk_import_keyboard(language: str = "ru") -> ReplyKeyboardMarkup:
+    """Меню выбора способа массовой загрузки."""
+    texts = {
+        "ru": {
+            "text_list": "📝 Список трек-кодов",
+            "excel": "📄 Excel файл",
+            "download_template": "📥 Скачать шаблон Excel",
+            "manual": "✍️ Ручной ввод трек-кода",
+            "back": "🔙 Назад",
+        },
+        "tj": {
+            "text_list": "📝 Рӯйхати рамзҳо",
+            "excel": "📄 Файли Excel",
+            "download_template": "📥 Боргирии шаблон",
+            "manual": "✍️ Воридкунии дастӣ",
+            "back": "🔙 Бозгашт",
+        }
+    }
+    t = texts[language]
+    builder = ReplyKeyboardBuilder()
+    builder.row(
+        KeyboardButton(text=t["text_list"]),
+        KeyboardButton(text=t["excel"]),
+        width=2
+    )
+    builder.row(
+        KeyboardButton(text=t["download_template"]),
+        width=1
+    )
+    builder.row(
+        KeyboardButton(text=t["manual"]),
+        width=1
+    )
+    builder.row(KeyboardButton(text=t["back"]), width=1)
+    return builder.as_markup(resize_keyboard=True)
+
+
+# Для обратной совместимости
 get_admin_main_menu = get_admin_main_keyboard

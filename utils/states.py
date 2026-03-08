@@ -1,5 +1,6 @@
 from aiogram.fsm.state import State, StatesGroup
 
+
 class AdminStates(StatesGroup):
     """Состояния для администратора"""
     WAITING_TRACK_FOR_UPDATE = State()
@@ -23,8 +24,14 @@ class AdminStates(StatesGroup):
     BULK_IMPORT_TEXT_INPUT = State()
     BULK_IMPORT_EXCEL_UPLOAD = State()
     BULK_IMPORT_MANUAL_TRACK = State()
+
+    # ДОБАВЛЯЕМ НЕДОСТАЮЩЕЕ СОСТОЯНИЕ
+    WAITING_UPDATE_METHOD = State()
+
+
 class LanguageState(StatesGroup):
     choosing_language = State()
+
 
 class ClientState(StatesGroup):
     main_menu = State()
@@ -61,12 +68,14 @@ class ClientState(StatesGroup):
     course_menu = State()
 
     waiting_for_contact = State()
- 
+
+
 class AdminChinaState(StatesGroup):
     main_menu = State()
     add_product = State()
     bulk_update = State()
     reports_menu = State()
+
 
 class AdminTajikistanState(StatesGroup):
     main_menu = State()
@@ -74,7 +83,8 @@ class AdminTajikistanState(StatesGroup):
     update_status = State()
     door_delivery_management = State()
     reports_menu = State()
-    
+
+
 class AdminState(StatesGroup):
     main_menu = State()
     add_product = State()
@@ -82,6 +92,7 @@ class AdminState(StatesGroup):
     update_status_input = State()
     update_status_select = State()
     reports_menu = State()
+
 
 class TrackCodeStates(StatesGroup):
     """Состояния для работы с трек-кодами"""

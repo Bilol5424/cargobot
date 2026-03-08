@@ -1,22 +1,21 @@
 """
-Добавление товаров администратором
+Добавление товаров администратором (reply-клавиатура)
 """
 import logging
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import Product, User, UserTrackCode, UserTrackCodeStatus
+from database.models import Product, User
 from database.session import async_session_maker
-from database.repository import UserTrackCodeRepository, UserRepository
+from database.repository import UserTrackCodeRepository
 from utils.states import AdminStates
 from keyboards.admin import (
     get_back_to_admin_keyboard,
     get_product_categories_keyboard,
-    get_yes_no_keyboard
+    get_yes_no_keyboard,
 )
 from services.track_code_generator import TrackCodeGenerator
 from config import settings
@@ -24,70 +23,108 @@ from config import settings
 logger = logging.getLogger(__name__)
 add_product_router = Router()
 
-@add_product_router.callback_query(F.data == "admin_add_product")
-async def add_product_start(callback: CallbackQuery, state: FSMContext):
-    """Начало добавления товара"""
-    if not settings.is_admin(callback.from_user.id):
-        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+CATEGORY_MAP = {
+    "📱 Электроника": "electronics",
+    "👕 Одежда": "clothing",
+    "👟 Обувь": "shoes",
+    "🏠 Бытовая техника": "home_appliances",
+    "💄 Косметика": "beauty",
+    "🧸 Игрушки": "toys",
+    "🚗 Автозапчасти": "automotive",
+    "⚽ Спорттовары": "sports",
+    "📦 Другое": "other",
+    "📱 Электроника": "electronics",
+    "👕 Либос": "clothing",
+    "👟 Пойафзол": "shoes",
+    "🏠 Асбобҳои хонагӣ": "home_appliances",
+    "💄 Косметика": "beauty",
+    "🧸 Бозичаҳо": "toys",
+    "🚗 Қисмҳои автомобил": "automotive",
+    "⚽ Ашёҳои варзишӣ": "sports",
+    "📦 Дигар": "other",
+}
+
+
+@add_product_router.message(F.text == "📦 Добавить трек-код")
+async def add_product_start(message: Message, state: FSMContext):
+    if not settings.is_admin(message.from_user.id):
+        await message.answer("⛔ Доступ запрещен")
         return
-    
-    # Генерируем трек-код
-    track_code = TrackCodeGenerator.generate_track_code(callback.from_user.id)
-    
-    await state.update_data(
-        track_code=track_code,
-        user_id=callback.from_user.id
-    )
-    
-    await callback.message.edit_text(
+
+    track_code = TrackCodeGenerator.generate_track_code(message.from_user.id)
+    await state.update_data(track_code=track_code, user_id=message.from_user.id)
+
+    await message.answer(
         f"📦 Добавление нового товара\n\n"
         f"📋 Сгенерирован трек-код: {track_code}\n\n"
         f"Введите название товара:",
         reply_markup=get_back_to_admin_keyboard()
     )
-    
     await state.set_state(AdminStates.WAITING_PRODUCT_NAME)
-    await callback.answer()
+
 
 @add_product_router.message(AdminStates.WAITING_PRODUCT_NAME)
 async def process_product_name(message: Message, state: FSMContext):
-    """Обработка названия товара"""
+    if message.text in ("🔙 Назад", "🔙 Бозгашт", "🔙 Назад в админ-панель"):
+        await state.clear()
+        from handlers.admin.main_menu import admin_menu
+        await admin_menu(message)
+        return
+
     product_name = message.text.strip()
-    
     if len(product_name) < 2:
         await message.answer(
             "❌ Название слишком короткое. Введите название товара:",
             reply_markup=get_back_to_admin_keyboard()
         )
         return
-    
+
     await state.update_data(product_name=product_name)
-    
+
     await message.answer(
         "📋 Выберите категорию товара:",
-        reply_markup=get_product_categories_keyboard()
+        reply_markup=get_product_categories_keyboard(language="ru")
     )
-    
     await state.set_state(AdminStates.WAITING_PRODUCT_CATEGORY)
 
-@add_product_router.callback_query(F.data.startswith("category_"))
-async def process_product_category(callback: CallbackQuery, state: FSMContext):
-    """Обработка категории товара"""
-    category = callback.data.replace("category_", "")
-    
-    await state.update_data(product_category=category)
-    
-    await callback.message.edit_text(
+
+@add_product_router.message(AdminStates.WAITING_PRODUCT_CATEGORY)
+async def process_product_category(message: Message, state: FSMContext):
+    if message.text in ("🔙 Назад", "🔙 Бозгашт", "🔙 Назад в админ-панель"):
+        data = await state.get_data()
+        await message.answer(
+            f"📦 Добавление нового товара\n\n"
+            f"📋 Трек-код: {data.get('track_code')}\n\n"
+            f"Введите название товара:",
+            reply_markup=get_back_to_admin_keyboard()
+        )
+        await state.set_state(AdminStates.WAITING_PRODUCT_NAME)
+        return
+
+    category_code = CATEGORY_MAP.get(message.text)
+    if not category_code:
+        await message.answer("❌ Пожалуйста, выберите категорию из списка.")
+        return
+
+    await state.update_data(product_category=category_code)
+
+    await message.answer(
         "🔢 Введите количество товара (целое число):",
         reply_markup=get_back_to_admin_keyboard()
     )
-    
     await state.set_state(AdminStates.WAITING_PRODUCT_QUANTITY)
-    await callback.answer()
+
 
 @add_product_router.message(AdminStates.WAITING_PRODUCT_QUANTITY)
 async def process_product_quantity(message: Message, state: FSMContext):
-    """Обработка количества товара"""
+    if message.text in ("🔙 Назад", "🔙 Бозгашт", "🔙 Назад в админ-панель"):
+        await message.answer(
+            "📋 Выберите категорию товара:",
+            reply_markup=get_product_categories_keyboard()
+        )
+        await state.set_state(AdminStates.WAITING_PRODUCT_CATEGORY)
+        return
+
     try:
         quantity = int(message.text.strip())
         if quantity <= 0:
@@ -98,20 +135,27 @@ async def process_product_quantity(message: Message, state: FSMContext):
             reply_markup=get_back_to_admin_keyboard()
         )
         return
-    
+
     await state.update_data(quantity=quantity)
-    
+
     await message.answer(
         "💰 Введите цену за единицу (в долларах США):\n"
         "Пример: 15.50",
         reply_markup=get_back_to_admin_keyboard()
     )
-    
     await state.set_state(AdminStates.WAITING_PRODUCT_PRICE)
+
 
 @add_product_router.message(AdminStates.WAITING_PRODUCT_PRICE)
 async def process_product_price(message: Message, state: FSMContext):
-    """Обработка цены товара"""
+    if message.text in ("🔙 Назад", "🔙 Бозгашт", "🔙 Назад в админ-панель"):
+        await message.answer(
+            "🔢 Введите количество товара (целое число):",
+            reply_markup=get_back_to_admin_keyboard()
+        )
+        await state.set_state(AdminStates.WAITING_PRODUCT_QUANTITY)
+        return
+
     try:
         price = float(message.text.strip())
         if price <= 0:
@@ -122,20 +166,27 @@ async def process_product_price(message: Message, state: FSMContext):
             reply_markup=get_back_to_admin_keyboard()
         )
         return
-    
+
     await state.update_data(unit_price_usd=price)
-    
+
     await message.answer(
         "⚖️ Введите вес товара в килограммах:\n"
         "Пример: 2.5",
         reply_markup=get_back_to_admin_keyboard()
     )
-    
     await state.set_state(AdminStates.WAITING_PRODUCT_WEIGHT)
+
 
 @add_product_router.message(AdminStates.WAITING_PRODUCT_WEIGHT)
 async def process_product_weight(message: Message, state: FSMContext):
-    """Обработка веса товара"""
+    if message.text in ("🔙 Назад", "🔙 Бозгашт", "🔙 Назад в админ-панель"):
+        await message.answer(
+            "💰 Введите цену за единицу:",
+            reply_markup=get_back_to_admin_keyboard()
+        )
+        await state.set_state(AdminStates.WAITING_PRODUCT_PRICE)
+        return
+
     try:
         weight = float(message.text.strip())
         if weight <= 0:
@@ -146,72 +197,78 @@ async def process_product_weight(message: Message, state: FSMContext):
             reply_markup=get_back_to_admin_keyboard()
         )
         return
-    
+
     await state.update_data(weight_kg=weight)
-    
+
     await message.answer(
         "📦 Товар хрупкий?\n"
         "(легко бьется, требует особой упаковки)",
         reply_markup=get_yes_no_keyboard("fragile")
     )
-    
     await state.set_state(AdminStates.WAITING_PRODUCT_SPECIAL)
 
-@add_product_router.callback_query(F.data.startswith("fragile_"))
-async def process_fragile(callback: CallbackQuery, state: FSMContext):
-    """Обработка хрупкости товара"""
-    fragile = callback.data.replace("fragile_", "") == "yes"
-    
+
+@add_product_router.message(AdminStates.WAITING_PRODUCT_SPECIAL, F.text.in_(["✅ Да", "❌ Нет"]))
+async def process_fragile(message: Message, state: FSMContext):
+    fragile = (message.text == "✅ Да")
     await state.update_data(fragile=fragile)
-    
-    await callback.message.edit_text(
+
+    await message.answer(
         "🔋 Товар содержит батареи или аккумуляторы?",
         reply_markup=get_yes_no_keyboard("battery")
     )
-    
-    await state.set_state(AdminStates.WAITING_PRODUCT_SPECIAL)
-    await callback.answer()
+    await state.update_data(special_step="battery")
 
-@add_product_router.callback_query(F.data.startswith("battery_"))
-async def process_battery(callback: CallbackQuery, state: FSMContext):
-    """Обработка наличия батареи"""
-    has_battery = callback.data.replace("battery_", "") == "yes"
-    
+
+@add_product_router.message(AdminStates.WAITING_PRODUCT_SPECIAL, F.text.in_(["✅ Да", "❌ Нет"]))
+async def process_battery(message: Message, state: FSMContext):
+    data = await state.get_data()
+    step = data.get("special_step")
+    if step != "battery":
+        return
+
+    has_battery = (message.text == "✅ Да")
     await state.update_data(has_battery=has_battery)
-    
-    await callback.message.edit_text(
+
+    await message.answer(
         "💧 Товар является жидкостью?",
         reply_markup=get_yes_no_keyboard("liquid")
     )
-    
-    await state.set_state(AdminStates.WAITING_PRODUCT_SPECIAL)
-    await callback.answer()
+    await state.update_data(special_step="liquid")
 
-@add_product_router.callback_query(F.data.startswith("liquid_"))
-async def process_liquid(callback: CallbackQuery, state: FSMContext):
-    """Обработка жидкости"""
-    is_liquid = callback.data.replace("liquid_", "") == "yes"
-    
+
+@add_product_router.message(AdminStates.WAITING_PRODUCT_SPECIAL, F.text.in_(["✅ Да", "❌ Нет"]))
+async def process_liquid(message: Message, state: FSMContext):
+    data = await state.get_data()
+    step = data.get("special_step")
+    if step != "liquid":
+        return
+
+    is_liquid = (message.text == "✅ Да")
     await state.update_data(is_liquid=is_liquid)
-    
-    # Запрашиваем страну отправления
-    await callback.message.edit_text(
+
+    await message.answer(
         "🌍 Введите страну отправления товара:\n"
         "Пример: Китай, США, Россия",
         reply_markup=get_back_to_admin_keyboard()
     )
-    
     await state.set_state(AdminStates.WAITING_PRODUCT_COUNTRY)
-    await callback.answer()
+
 
 @add_product_router.message(AdminStates.WAITING_PRODUCT_COUNTRY)
 async def process_country(message: Message, state: FSMContext):
-    """Обработка страны отправления"""
+    if message.text in ("🔙 Назад", "🔙 Бозгашт", "🔙 Назад в админ-панель"):
+        await message.answer(
+            "💧 Товар является жидкостью?",
+            reply_markup=get_yes_no_keyboard("liquid")
+        )
+        await state.update_data(special_step="liquid")
+        await state.set_state(AdminStates.WAITING_PRODUCT_SPECIAL)
+        return
+
     country = message.text.strip()
-    
     await state.update_data(country_from=country)
-    
-    # Запрашиваем тип доставки
+
     await message.answer(
         "🚚 Выберите тип доставки:\n"
         "1. Авиадоставка (быстро, дорого)\n"
@@ -220,84 +277,93 @@ async def process_country(message: Message, state: FSMContext):
         "Введите номер или название:",
         reply_markup=get_back_to_admin_keyboard()
     )
-    
     await state.set_state(AdminStates.WAITING_DELIVERY_TYPE)
+
 
 @add_product_router.message(AdminStates.WAITING_DELIVERY_TYPE)
 async def process_delivery_type(message: Message, state: FSMContext):
-    """Обработка типа доставки"""
+    if message.text in ("🔙 Назад", "🔙 Бозгашт", "🔙 Назад в админ-панель"):
+        await message.answer(
+            "🌍 Введите страну отправления товара:",
+            reply_markup=get_back_to_admin_keyboard()
+        )
+        await state.set_state(AdminStates.WAITING_PRODUCT_COUNTRY)
+        return
+
     delivery_type = message.text.strip()
-    
-    # Определяем тип доставки по вводу
     if delivery_type in ["1", "авиа", "авиадоставка", "aviation"]:
         delivery_type = "Авиадоставка"
     elif delivery_type in ["2", "морская", "море", "sea"]:
         delivery_type = "Морская доставка"
     elif delivery_type in ["3", "авто", "автодоставка", "car"]:
         delivery_type = "Автодоставка"
-    
+
     await state.update_data(delivery_type=delivery_type)
-    
-    # Собираем все данные
+
     data = await state.get_data()
-    
-    # Рассчитываем общую стоимость
     quantity = data.get('quantity', 1)
     unit_price = data.get('unit_price_usd', 0)
     total_value = quantity * unit_price
-    
-    # Формируем сводку
-    summary = f"📋 Сводка по товару:\n\n"
-    summary += f"📦 Трек-код: {data.get('track_code')}\n"
-    summary += f"📝 Название: {data.get('product_name')}\n"
-    summary += f"🏷️ Категория: {data.get('product_category')}\n"
-    summary += f"🔢 Количество: {quantity} шт.\n"
-    summary += f"💰 Цена за ед.: ${unit_price:.2f}\n"
-    summary += f"💵 Общая стоимость: ${total_value:.2f}\n"
-    summary += f"⚖️ Вес: {data.get('weight_kg')} кг\n"
-    summary += f"🎯 Хрупкий: {'Да' if data.get('fragile') else 'Нет'}\n"
-    summary += f"🔋 Батарея: {'Да' if data.get('has_battery') else 'Нет'}\n"
-    summary += f"💧 Жидкость: {'Да' if data.get('is_liquid') else 'Нет'}\n"
-    summary += f"🌍 Страна: {data.get('country_from')}\n"
-    summary += f"🚚 Доставка: {delivery_type}\n\n"
-    summary += f"✅ Все верно? (да/нет)"
-    
+
+    summary = (
+        f"📋 Сводка по товару:\n\n"
+        f"📦 Трек-код: {data.get('track_code')}\n"
+        f"📝 Название: {data.get('product_name')}\n"
+        f"🏷️ Категория: {data.get('product_category')}\n"
+        f"🔢 Количество: {quantity} шт.\n"
+        f"💰 Цена за ед.: ${unit_price:.2f}\n"
+        f"💵 Общая стоимость: ${total_value:.2f}\n"
+        f"⚖️ Вес: {data.get('weight_kg')} кг\n"
+        f"🎯 Хрупкий: {'Да' if data.get('fragile') else 'Нет'}\n"
+        f"🔋 Батарея: {'Да' if data.get('has_battery') else 'Нет'}\n"
+        f"💧 Жидкость: {'Да' if data.get('is_liquid') else 'Нет'}\n"
+        f"🌍 Страна: {data.get('country_from')}\n"
+        f"🚚 Доставка: {delivery_type}\n\n"
+        f"✅ Все верно? (да/нет)"
+    )
+
     await message.answer(
         summary,
         reply_markup=get_yes_no_keyboard("confirm")
     )
-    
     await state.update_data(total_value_usd=total_value)
     await state.set_state(AdminStates.WAITING_CONFIRMATION)
 
-@add_product_router.callback_query(F.data.startswith("confirm_"))
-async def process_confirmation(callback: CallbackQuery, state: FSMContext):
-    """Обработка подтверждения"""
-    confirm = callback.data.replace("confirm_", "") == "yes"
-    
+
+@add_product_router.message(AdminStates.WAITING_CONFIRMATION, F.text.in_(["✅ Да", "❌ Нет"]))
+async def process_confirmation(message: Message, state: FSMContext):
+    confirm = (message.text == "✅ Да")
     if not confirm:
-        await callback.message.edit_text(
+        await message.answer(
             "❌ Добавление товара отменено.",
             reply_markup=get_back_to_admin_keyboard()
         )
         await state.clear()
-        await callback.answer()
         return
-    
-    # Получаем данные
+
     data = await state.get_data()
-    
-    # Создаем товар в базе данных
+
     async with async_session_maker() as session:
+        existing = await session.execute(
+            select(Product).where(Product.track_code == data['track_code'])
+        )
+        if existing.scalar_one_or_none():
+            await message.answer(
+                f"❌ Товар с трек-кодом {data['track_code']} уже существует.",
+                reply_markup=get_back_to_admin_keyboard()
+            )
+            await state.clear()
+            return
+
         product_data = {
-            "track_code": data.get('track_code'),
-            "user_id": data.get('user_id'),
-            "product_name": data.get('product_name'),
-            "product_category": data.get('product_category'),
-            "quantity": data.get('quantity'),
-            "unit_price_usd": data.get('unit_price_usd'),
-            "total_value_usd": data.get('total_value_usd'),
-            "weight_kg": data.get('weight_kg'),
+            "track_code": data['track_code'],
+            "user_id": data['user_id'],
+            "product_name": data['product_name'],
+            "product_category": data['product_category'],
+            "quantity": data['quantity'],
+            "unit_price_usd": data['unit_price_usd'],
+            "total_value_usd": data['total_value_usd'],
+            "weight_kg": data['weight_kg'],
             "fragile": data.get('fragile', False),
             "has_battery": data.get('has_battery', False),
             "is_liquid": data.get('is_liquid', False),
@@ -306,72 +372,51 @@ async def process_confirmation(callback: CallbackQuery, state: FSMContext):
             "delivery_type": data.get('delivery_type'),
             "send_date": datetime.utcnow(),
             "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.utcnow(),
         }
-        
-        # Проверяем, нет ли уже товара с таким трек-кодом
-        existing_query = select(Product).where(Product.track_code == data.get('track_code'))
-        result = await session.execute(existing_query)
-        existing_product = result.scalar_one_or_none()
-        
-        if existing_product:
-            await callback.message.edit_text(
-                f"❌ Товар с трек-кодом {data.get('track_code')} уже существует.",
-                reply_markup=get_back_to_admin_keyboard()
-            )
-        else:
-            # Создаем новый товар
-            new_product = Product(**product_data)
-            session.add(new_product)
-            await session.commit()
+        new_product = Product(**product_data)
+        session.add(new_product)
+        await session.commit()
 
-            # Активируем ожидающие трек-коды и уведомляем пользователей
-            track_code = data.get('track_code')
-            utc_repo = UserTrackCodeRepository(session)
-            user_repo = UserRepository(session)
-            pending_user_ids = await utc_repo.activate_pending_track_codes(track_code)
+        utc_repo = UserTrackCodeRepository(session)
+        pending_user_ids = await utc_repo.activate_pending_track_codes(data['track_code'])
 
-            notified_count = 0
-            for uid in pending_user_ids:
-                try:
-                    result = await session.execute(
-                        select(User).where(User.id == uid)
+        notified_count = 0
+        for uid in pending_user_ids:
+            try:
+                user = await session.execute(select(User).where(User.id == uid))
+                u = user.scalar_one_or_none()
+                if u:
+                    notify_text = {
+                        "ru": f"📦 Ваш трек-код <code>{data['track_code']}</code> зарегистрирован!\n\n"
+                              f"🏷️ Товар: {data['product_name']}\n"
+                              f"📍 Статус: Создан",
+                        "tj": f"📦 Рамзи тамошобини шумо <code>{data['track_code']}</code> сабт шуд!\n\n"
+                              f"🏷️ Маҳсулот: {data['product_name']}\n"
+                              f"📍 Статус: Сохта шудааст"
+                    }
+                    await message.bot.send_message(
+                        u.telegram_id,
+                        notify_text.get(u.language, notify_text["ru"]),
+                        parse_mode="HTML"
                     )
-                    u = result.scalar_one_or_none()
-                    if u:
-                        notify_text = {
-                            "ru": f"📦 Ваш трек-код <code>{track_code}</code> зарегистрирован!\n\n"
-                                  f"🏷️ Товар: {data.get('product_name')}\n"
-                                  f"📍 Статус: Создан",
-                            "tj": f"📦 Рамзи тамошобини шумо <code>{track_code}</code> сабт шуд!\n\n"
-                                  f"🏷️ Маҳсулот: {data.get('product_name')}\n"
-                                  f"📍 Статус: Сохта шудааст"
-                        }
-                        await callback.bot.send_message(
-                            u.telegram_id,
-                            notify_text.get(u.language, notify_text["ru"]),
-                            parse_mode="HTML"
-                        )
-                        notified_count += 1
-                except Exception as e:
-                    logger.error(f"Ошибка уведомления пользователя {uid}: {e}")
+                    notified_count += 1
+            except Exception as e:
+                logger.error(f"Ошибка уведомления пользователя {uid}: {e}")
 
-            notify_info = ""
-            if notified_count > 0:
-                notify_info = f"\n\n📨 Уведомлено пользователей: {notified_count}"
+        notify_info = f"\n\n📨 Уведомлено пользователей: {notified_count}" if notified_count else ""
 
-            await callback.message.edit_text(
-                f"✅ Товар успешно добавлен!\n\n"
-                f"📦 Трек-код: {track_code}\n"
-                f"📝 Название: {data.get('product_name')}\n"
-                f"🏷️ Категория: {data.get('product_category')}\n"
-                f"🔢 Количество: {data.get('quantity')} шт.\n"
-                f"💰 Общая стоимость: ${data.get('total_value_usd'):.2f}\n\n"
-                f"📊 Статус: CREATED\n"
-                f"⏰ Дата добавления: {datetime.utcnow().strftime('%d.%m.%Y %H:%M')}"
-                f"{notify_info}",
-                reply_markup=get_back_to_admin_keyboard()
-            )
+        await message.answer(
+            f"✅ Товар успешно добавлен!\n\n"
+            f"📦 Трек-код: {data['track_code']}\n"
+            f"📝 Название: {data['product_name']}\n"
+            f"🏷️ Категория: {data['product_category']}\n"
+            f"🔢 Количество: {data['quantity']} шт.\n"
+            f"💰 Общая стоимость: ${data['total_value_usd']:.2f}\n\n"
+            f"📊 Статус: CREATED\n"
+            f"⏰ Дата добавления: {datetime.utcnow().strftime('%d.%m.%Y %H:%M')}"
+            f"{notify_info}",
+            reply_markup=get_back_to_admin_keyboard()
+        )
 
     await state.clear()
-    await callback.answer()

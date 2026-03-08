@@ -35,7 +35,7 @@ async def cmd_start(message: Message, state: FSMContext):
                 f"Пользователь {message.from_user.id} уже зарегистрирован (role={user.role})"
             )
 
-            # ✅ ЕСЛИ АДМИН — показываем админ меню
+            # ✅ ЕСЛИ АДМИН — показываем админ меню (reply-клавиатура)
             if user.role and user.role.value != "client":
                 from keyboards.admin import get_admin_main_menu
 
@@ -67,50 +67,50 @@ async def cmd_start(message: Message, state: FSMContext):
 async def process_language_choice(message: Message, state: FSMContext):
     """Обработка выбора языка - ТОЛЬКО выбор языка, не контакты"""
     logger.info(f"Выбор языка: {message.text}")
-    
+
     language_map = {
         "🇷🇺 Русский": "ru",
         "🇷🇺 русский": "ru",
         "🇹🇯 Тоҷикӣ": "tj",
         "🇹🇯 тоҷикӣ": "tj"
     }
-    
+
     chosen_language = language_map.get(message.text)
-    
+
     if not chosen_language:
         # Если это не выбор языка, проверяем, не нажал ли пользователь "Поделиться номером"
         # Это временное сообщение, пока пользователь не выбрал язык
         await message.answer("Пожалуйста, выберите язык из предложенных вариантов.")
         return
-    
+
     async for session in get_db():
         user_repo = UserRepository(session)
-        
+
         # Проверяем, является ли пользователь админом
         is_admin = settings.is_admin(message.from_user.id)
         role = "admin_cn" if is_admin else "client"
-        
+
         user = await user_repo.create_user(
             telegram_id=message.from_user.id,
             full_name=message.from_user.full_name,
             language=chosen_language,
             role=role
         )
-        
+
         logger.info(f"Создан пользователь: ID={user.id}, роль={role}, язык={chosen_language}")
-        
+
         if role == "client":
             await message.answer(
                 get_welcome_text(chosen_language),
                 reply_markup=ReplyKeyboardRemove()
             )
-            
+
             # Запрос номера телефона
             texts = {
                 "ru": "Пожалуйста, поделитесь своим номером телефона для авторизации:",
                 "tj": "Лутфан, барои авторизатсия рақами телефони худро мубодила кунед:"
             }
-            
+
             keyboard = ReplyKeyboardBuilder()
             keyboard.add(KeyboardButton(
                 text="📱 Поделиться номером" if chosen_language == "ru" else "📱 Рақами худро мубодила кунед",
@@ -119,17 +119,17 @@ async def process_language_choice(message: Message, state: FSMContext):
             keyboard.add(KeyboardButton(
                 text="❌ Отмена" if chosen_language == "ru" else "❌ Бекор кардан"
             ))
-            
+
             await message.answer(
                 texts[chosen_language],
                 reply_markup=keyboard.as_markup(resize_keyboard=True)
             )
-            
+
             # Переходим в состояние ожидания контакта
             await state.set_state(ClientState.waiting_for_contact)
-            
+
         else:
-            # Админы - сразу в меню
+            # Админы - сразу в меню (reply-клавиатура)
             from keyboards.admin import get_admin_main_menu
             await message.answer(
                 get_welcome_text(chosen_language, is_admin=True),
