@@ -32,6 +32,35 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
+    async def update_user_profile(
+        self,
+        telegram_id: int,
+        phone: Optional[str] = None,
+        full_name: Optional[str] = None,
+        region: Optional[str] = None,
+        language: Optional[str] = None,
+    ) -> Optional[User]:
+        """
+        Обновление полей профиля пользователя по его Telegram ID.
+        Только переданные (не None) поля будут изменены.
+        """
+        user = await self.get_user_by_telegram_id(telegram_id)
+        if not user:
+            return None
+
+        if phone is not None:
+            user.phone = phone
+        if full_name is not None:
+            user.full_name = full_name
+        if region is not None:
+            user.region = region
+        if language is not None:
+            user.language = language
+
+        await self.session.commit()
+        await self.session.refresh(user)
+        return user
+
     async def create_user(
         self,
         telegram_id: int,
@@ -92,6 +121,24 @@ class ProductRepository:
         await self.session.commit()
         await self.session.refresh(product)
         return product
+
+    async def get_user_products(
+        self,
+        user_id: int,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Product]:
+        """
+        Получить список товаров пользователя, отсортированных по дате создания (новые сверху).
+        """
+        result = await self.session.execute(
+            select(Product)
+            .where(Product.user_id == user_id)
+            .order_by(Product.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(result.scalars().all())
 
     async def export_to_excel(self, products: List[Product]) -> bytes:
         """Экспорт списка товаров в Excel файл (возвращает bytes)"""
@@ -160,6 +207,43 @@ class UserTrackCodeRepository:
         await self.session.commit()
         await self.session.refresh(utc)
         return utc
+
+    async def get_user_track_codes(self, user_id: int) -> List[Dict[str, Optional[object]]]:
+        """
+        Получить список трек-кодов пользователя с LEFT JOIN на products.
+        Возвращает список словарей:
+        {
+            "user_track_code": UserTrackCode,
+            "product": Optional[Product],
+        }
+        """
+        result = await self.session.execute(
+            select(UserTrackCode, Product)
+            .join(
+                Product,
+                Product.track_code == UserTrackCode.track_code,
+                isouter=True,
+            )
+            .where(UserTrackCode.user_id == user_id)
+            .order_by(UserTrackCode.created_at.desc())
+        )
+        rows = result.all()
+        return [
+            {"user_track_code": utc, "product": product}
+            for utc, product in rows
+        ]
+
+    async def user_has_track_code(self, user_id: int, track_code: str) -> bool:
+        """
+        Проверить, есть ли у пользователя указанный трек-код в user_track_codes.
+        """
+        result = await self.session.execute(
+            select(UserTrackCode).where(
+                UserTrackCode.user_id == user_id,
+                UserTrackCode.track_code == track_code,
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
 
 # =========================================================
