@@ -6,4 +6,4 @@ class AdminSearchService:
         self.repo = repo
 
     async def by_track_code(self, code: str):
-        return await self.repo.get_by_track_code(code)
+        return await self.repo.get_product_by_track_code(code)

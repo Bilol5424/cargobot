@@ -1,6 +1,7 @@
 # keyboards/admin.py
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 def get_admin_main_keyboard(role: str = "admin_cn", language: str = "ru") -> ReplyKeyboardMarkup:
@@ -9,12 +10,11 @@ def get_admin_main_keyboard(role: str = "admin_cn", language: str = "ru") -> Rep
     """
     texts = {
         "ru": {
-            "add_product": "📦 Добавить трек-код",
-            "bulk_import": "📥 Массовая загрузка",
+            "add_product": "➕ Добавить трек-код",
+            "bulk_import": "📥 Массовое добавление",
             "update_status": "🔄 Обновить статусы",
             "reports": "📊 Отчеты",
             "profile": "👨‍💼 Профиль",
-            "all_products": "📋 Все товары",
             "search": "🔍 Поиск",
             "china_warehouse": "🇨🇳 Китайский склад",
             "tj_warehouse": "🇹🇯 Таджикский склад",
@@ -22,12 +22,11 @@ def get_admin_main_keyboard(role: str = "admin_cn", language: str = "ru") -> Rep
             "main_menu": "🔙 В главное меню",
         },
         "tj": {
-            "add_product": "📦 Илова кардани рамз",
+            "add_product": "➕ Илова кардани рамз",
             "bulk_import": "📥 Боркунии оммавӣ",
             "update_status": "🔄 Навсозии статус",
             "reports": "📊 Ҳисоботҳо",
             "profile": "👨‍💼 Профил",
-            "all_products": "📋 Ҳамаи маҳсулот",
             "search": "🔍 Ҷустуҷӯ",
             "china_warehouse": "🇨🇳 Анбори Чин",
             "tj_warehouse": "🇹🇯 Анбори Тоҷикистон",
@@ -50,8 +49,7 @@ def get_admin_main_keyboard(role: str = "admin_cn", language: str = "ru") -> Rep
     )
     builder.row(
         KeyboardButton(text=t["profile"]),
-        KeyboardButton(text=t["all_products"]),
-        width=2
+        width=1
     )
     builder.row(
         KeyboardButton(text=t["search"]),
@@ -145,42 +143,27 @@ def get_reports_keyboard(language: str = "ru") -> ReplyKeyboardMarkup:
     """Меню отчетов."""
     texts = {
         "ru": {
-            "monthly_delivered": "📦 Доставлено за месяц",
-            "monthly_received": "📥 Принято за месяц",
-            "financial": "💰 Финансовый отчет",
-            "user_stats": "👥 Статистика пользователей",
-            "export_excel": "💾 Экспорт в Excel",
-            "system_info": "🖥️ Информация о системе",
+            "general": "📈 Общая статистика",
+            "by_status": "📊 По статусам",
+            "by_period": "📅 За период",
+            "export": "💾 Экспорт данных",
             "back": "🔙 Назад",
         },
         "tj": {
-            "monthly_delivered": "📦 Расонидашуда дар моҳ",
-            "monthly_received": "📥 Қабулшуда дар моҳ",
-            "financial": "💰 Ҳисоботи молиявӣ",
-            "user_stats": "👥 Омори корбарон",
-            "export_excel": "💾 Экспорт ба Excel",
-            "system_info": "🖥️ Маълумоти система",
+            "general": "📈 Омори умумӣ",
+            "by_status": "📊 Аз рӯи статус",
+            "by_period": "📅 Дар давраи вақтӣ",
+            "export": "💾 Экспорти маълумот",
             "back": "🔙 Бозгашт",
         }
     }
     t = texts[language]
     builder = ReplyKeyboardBuilder()
-    builder.row(
-        KeyboardButton(text=t["monthly_delivered"]),
-        KeyboardButton(text=t["monthly_received"]),
-        width=2
-    )
-    builder.row(
-        KeyboardButton(text=t["financial"]),
-        KeyboardButton(text=t["user_stats"]),
-        width=2
-    )
-    builder.row(
-        KeyboardButton(text=t["export_excel"]),
-        KeyboardButton(text=t["system_info"]),
-        width=2
-    )
-    builder.row(KeyboardButton(text=t["back"]), width=1)
+    builder.add(KeyboardButton(text=t["general"]))
+    builder.add(KeyboardButton(text=t["by_status"]))
+    builder.add(KeyboardButton(text=t["by_period"]))
+    builder.add(KeyboardButton(text=t["export"]))
+    builder.row(KeyboardButton(text=t["back"]))
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -277,6 +260,39 @@ def get_bulk_import_keyboard(language: str = "ru") -> ReplyKeyboardMarkup:
     )
     builder.row(KeyboardButton(text=t["back"]), width=1)
     return builder.as_markup(resize_keyboard=True)
+
+
+def get_status_selection_keyboard(language: str = "ru") -> InlineKeyboardMarkup:
+    """Клавиатура для выбора статуса товара."""
+    statuses = {
+        "ru": {
+            "created": "📝 Создан",
+            "china_warehouse": "🇨🇳 В Китае",
+            "in_transit": "✈️ В пути",
+            "tajikistan_warehouse": "🇹🇯 Прибыл на склад",
+            "ready_for_pickup": "📍 На выдаче",
+            "delivered": "✅ Выдан",
+            "cancelled": "❌ Отменен",
+            "problem": "⚠️ Проблема",
+        },
+        "tj": {
+            "created": "📝 Сохта шуд",
+            "china_warehouse": "🇨🇳 Дар Чин",
+            "in_transit": "✈️ Дар роҳ",
+            "tajikistan_warehouse": "🇹🇯 Дар анбор расид",
+            "ready_for_pickup": "📍 Барои супоридан омода",
+            "delivered": "✅ Супорида шуд",
+            "cancelled": "❌ Бекор шуд",
+            "problem": "⚠️ Мушкилот",
+        }
+    }
+
+    status_dict = statuses.get(language, statuses["ru"])
+    buttons = [
+        [InlineKeyboardButton(text=name, callback_data=status)]
+        for status, name in status_dict.items()
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 # Для обратной совместимости

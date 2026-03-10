@@ -26,7 +26,7 @@ async def admin_export_excel(message: Message, state: FSMContext):
         
         # Получаем ВСЕ товары из базы данных
         from sqlalchemy import select
-        result = await session.execute(select(ProductRepository.model))
+        result = await session.execute(select(product_repo.model))
         all_products = result.scalars().all()
         
         if not all_products:

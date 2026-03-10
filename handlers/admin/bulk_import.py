@@ -7,12 +7,13 @@ from datetime import datetime
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, FSInputFile
+from sqlalchemy.future import select
 
 from database.session import async_session_maker
 from database.repository import ProductRepository, UserTrackCodeRepository
 from database.models import User
 from utils.states import AdminStates
-from keyboards.admin import get_bulk_import_keyboard, get_back_to_admin_keyboard
+from keyboards.admin import get_bulk_import_keyboard, get_back_to_admin_keyboard, get_admin_main_keyboard
 from services.bulk_import import BulkImportService
 from services.excel_template import generate_import_template
 from config import settings
@@ -69,7 +70,22 @@ async def bulk_import_text_start(message: Message, state: FSMContext):
 @bulk_import_router.message(AdminStates.BULK_IMPORT_TEXT_INPUT)
 async def process_bulk_import_text(message: Message, state: FSMContext):
     if message.text in ("🔙 Назад", "🔙 Бозгашт", "🔙 Назад в админ-панель"):
-        await bulk_import_start(message, state)
+        # Возврат в главное меню администратора
+        user_id = message.from_user.id
+        admin_role = settings.get_admin_role(user_id)
+
+        async with async_session_maker() as session:
+            user = await session.execute(
+                select(User).where(User.telegram_id == user_id)
+            )
+            user = user.scalar_one_or_none()
+            language = user.language if user else "ru"
+
+        await message.answer(
+            "🛠 Админ-панель",
+            reply_markup=get_admin_main_keyboard(role=admin_role, language=language)
+        )
+        await state.clear()
         return
 
     text = message.text.strip()
@@ -270,7 +286,22 @@ async def bulk_import_manual_start(message: Message, state: FSMContext):
 @bulk_import_router.message(AdminStates.BULK_IMPORT_MANUAL_TRACK)
 async def process_bulk_import_manual(message: Message, state: FSMContext):
     if message.text in ("🔙 Назад", "🔙 Бозгашт", "🔙 Назад в админ-панель"):
-        await bulk_import_start(message, state)
+        # Возврат в главное меню администратора
+        user_id = message.from_user.id
+        admin_role = settings.get_admin_role(user_id)
+
+        async with async_session_maker() as session:
+            user = await session.execute(
+                select(User).where(User.telegram_id == user_id)
+            )
+            user = user.scalar_one_or_none()
+            language = user.language if user else "ru"
+
+        await message.answer(
+            "🛠 Админ-панель",
+            reply_markup=get_admin_main_keyboard(role=admin_role, language=language)
+        )
+        await state.clear()
         return
 
     track_code = message.text.strip().upper()

@@ -13,14 +13,22 @@ class AdminStatusService:
         updated = []
 
         for code in codes:
-            product = await self.repo.get_by_track_code(code)
+            product = await self.repo.get_product_by_track_code(code)
 
             if not product:
                 logger.warning("Track code not found: %s", code)
                 continue
 
-            product.status = status
-            await self.repo.update(product)
+            # Обновляем статус через сессию
+            from database.models import ProductStatus
+            try:
+                status_enum = ProductStatus(status)
+            except ValueError:
+                logger.error("Invalid status: %s", status)
+                continue
+
+            product.status = status_enum
+            await self.repo.session.commit()
             updated.append(code)
 
         logger.info("Bulk status update done: %s", len(updated))

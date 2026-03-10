@@ -93,6 +93,49 @@ class ProductRepository:
         await self.session.refresh(product)
         return product
 
+    async def export_to_excel(self, products: List[Product]) -> bytes:
+        """Экспорт списка товаров в Excel файл (возвращает bytes)"""
+        import pandas as pd
+        from io import BytesIO
+
+        data = []
+        for product in products:
+            data.append({
+                "ID": product.id,
+                "Трек-код": product.track_code,
+                "Название": product.product_name or "-",
+                "Категория": product.product_category.value if product.product_category else "-",
+                "Описание": product.product_description or "-",
+                "Количество": product.quantity or 1,
+                "Цена за единицу (USD)": product.unit_price_usd or 0,
+                "Общая стоимость (USD)": product.total_value_usd or 0,
+                "Вес (кг)": product.weight_kg or 0,
+                "Длина (см)": product.length_cm or "-",
+                "Ширина (см)": product.width_cm or "-",
+                "Высота (см)": product.height_cm or "-",
+                "Хрупкий": "Да" if product.fragile else "Нет",
+                "Батарея": "Да" if product.has_battery else "Нет",
+                "Жидкость": "Да" if product.is_liquid else "Нет",
+                "Статус": product.status.value if product.status else "-",
+                "Страна отправления": product.country_from or "-",
+                "Тип доставки": product.delivery_type or "-",
+                "Дата отправки": product.send_date.strftime("%d.%m.%Y %H:%M") if product.send_date else "-",
+                "Ожидаемая доставка": product.expected_delivery_date.strftime("%d.%m.%Y") if product.expected_delivery_date else "-",
+                "Статус доставки до дверей": product.door_delivery_status.value if product.door_delivery_status else "-",
+                "Дата прибытия": product.arrival_date.strftime("%d.%m.%Y %H:%M") if product.arrival_date else "-",
+                "Дата создания": product.created_at.strftime("%d.%m.%Y %H:%M") if product.created_at else "-",
+                "Дата обновления": product.updated_at.strftime("%d.%m.%Y %H:%M") if product.updated_at else "-",
+            })
+
+        df = pd.DataFrame(data)
+        output = BytesIO()
+
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Все товары', index=False)
+
+        output.seek(0)
+        return output.getvalue()
+
 
 # =========================================================
 # USER TRACK CODE REPOSITORY

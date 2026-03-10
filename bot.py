@@ -26,6 +26,7 @@ from handlers.admin.search_product import router as search_product_router
 from handlers.admin.export_all_products import router as export_all_products_router
 from handlers.admin.monthly_report import router as monthly_report_router
 from handlers.admin.profile_menu import router as profile_menu_router
+from handlers.admin.bulk_update import router as bulk_update_router
 
 # ---------------- ЛОГИРОВАНИЕ ----------------
 
@@ -123,6 +124,7 @@ async def main():
     dp.include_router(export_all_products_router)
     dp.include_router(monthly_report_router)
     dp.include_router(profile_menu_router)
+    dp.include_router(bulk_update_router)
 
     # ============================================================
     # АВТОИМПОРТ СУЩЕСТВУЮЩИХ ADMIN МОДУЛЕЙ
